@@ -1,0 +1,263 @@
+{# ── GoRules-style Decision Table Editor ── #}
+
+
+
+{% set n_in = schema.inputs | length %}
+{% set n_out = schema.outputs | length %}
+{% set has_schema = n_in > 0 or n_out > 0 %}
+
+{% if not has_schema %}
+{# ─── Empty schema state ─── #}
+<div class="dt-empty-schema">
+    <div class="es-icon">📋</div>
+    <h4>Schema is not defined</h4>
+    <p>Add conditions (INPUT) and results (OUTPUT) columns</p>
+    <div class="dt-empty-actions">
+        <button hx-post="/api/table/{{ func_name }}/add_input_col" hx-target="#editor-container" hx-swap="innerHTML">
+            ＋ Condition (INPUT)
+        </button>
+        <button hx-post="/api/table/{{ func_name }}/add_output_col" hx-target="#editor-container" hx-swap="innerHTML">
+            ＋ Result (OUTPUT)
+        </button>
+    </div>
+</div>
+
+{% else %}
+{# ─── Main table ─── #}
+<div class="dt-outer">
+    <div class="dt-scroll-area">
+        <table class="dt-table">
+            <thead>
+                {# ── Row 1: Section headers ── #}
+                <tr>
+                    <th class="th-rownum" rowspan="2">#</th>
+                    <th class="th-priority" rowspan="2">Prio</th>
+
+                    {# CONDITIONS section #}
+                    <th class="th-section th-conditions" colspan="{{ n_in if n_in > 0 else 1 }}">
+                        <div class="section-label-row">
+                            <span class="section-badge conditions-badge">
+                                ⬡ CONDITIONS
+                            </span>
+                            <button class="btn-add-col btn-add-col-cond"
+                                hx-post="/api/table/{{ func_name }}/add_input_col" hx-target="#editor-container"
+                                hx-swap="innerHTML" title="Add condition column">＋</button>
+                        </div>
+                    </th>
+
+                    <th class="th-divider" rowspan="2"></th>
+
+                    {# RESULTS section #}
+                    <th class="th-section th-results" colspan="{{ n_out if n_out > 0 else 1 }}">
+                        <div class="section-label-row">
+                            <span class="section-badge results-badge">
+                                ◈ RESULTS
+                            </span>
+                            <button class="btn-add-col btn-add-col-res"
+                                hx-post="/api/table/{{ func_name }}/add_output_col" hx-target="#editor-container"
+                                hx-swap="innerHTML" title="Add result column">＋</button>
+                        </div>
+                    </th>
+
+                    <th class="th-annotation" rowspan="2">Annotation</th>
+                    <th class="th-stop" rowspan="2">Stop</th>
+                    <th class="th-del" rowspan="2"></th>
+                </tr>
+
+                {# ── Row 2: Column definitions ── #}
+                <tr>
+                    {# Input columns #}
+                    {% if schema.inputs %}
+                    {% for col in schema.inputs %}
+                    {% set i = loop.index0 %}
+                    <th class="th-col-def th-col-input">
+                        <div class="col-def-wrap">
+                            <button class="btn-del-col" hx-delete="/api/table/{{ func_name }}/input_col/{{ i }}"
+                                hx-target="#editor-container" hx-swap="innerHTML" title="Delete column">✕</button>
+                            <input class="col-name-inp" name="name" value="{{ col.name }}"
+                                hx-put="/api/table/{{ func_name }}/input_col/{{ i }}/name" hx-target="#editor-container"
+                                hx-swap="innerHTML" hx-trigger="change" placeholder="field_name">
+                            <select class="col-type-sel" name="type"
+                                hx-put="/api/table/{{ func_name }}/input_col/{{ i }}/type" hx-target="#editor-container"
+                                hx-swap="innerHTML" hx-trigger="change">
+                                <option value="string" {% if col.type=='string' %}selected{% endif %}>🔤 string</option>
+                                <option value="number" {% if col.type=='number' %}selected{% endif %}>🔢 number</option>
+                                <option value="boolean" {% if col.type=='boolean' %}selected{% endif %}>⊨ boolean
+                                </option>
+                            </select>
+                        </div>
+                    </th>
+                    {% endfor %}
+                    {% else %}
+                    <th class="th-col-def th-col-input th-col-empty">
+                        <span class="col-empty-hint">← no columns</span>
+                    </th>
+                    {% endif %}
+
+                    {# Output columns #}
+                    {% if schema.outputs %}
+                    {% for col in schema.outputs %}
+                    {% set i = loop.index0 %}
+                    <th class="th-col-def th-col-output">
+                        <div class="col-def-wrap">
+                            <button class="btn-del-col" hx-delete="/api/table/{{ func_name }}/output_col/{{ i }}"
+                                hx-target="#editor-container" hx-swap="innerHTML" title="Delete column">✕</button>
+                            <input class="col-name-inp" name="name" value="{{ col.name }}"
+                                hx-put="/api/table/{{ func_name }}/output_col/{{ i }}/name"
+                                hx-target="#editor-container" hx-swap="innerHTML" hx-trigger="change"
+                                placeholder="output_name">
+                            <select class="col-type-sel" name="type"
+                                hx-put="/api/table/{{ func_name }}/output_col/{{ i }}/type"
+                                hx-target="#editor-container" hx-swap="innerHTML" hx-trigger="change">
+                                <option value="string" {% if col.type=='string' %}selected{% endif %}>🔤 string</option>
+                                <option value="number" {% if col.type=='number' %}selected{% endif %}>🔢 number</option>
+                                <option value="boolean" {% if col.type=='boolean' %}selected{% endif %}>⊨ boolean
+                                </option>
+                            </select>
+                        </div>
+                    </th>
+                    {% endfor %}
+                    {% else %}
+                    <th class="th-col-def th-col-output th-col-empty">
+                        <span class="col-empty-hint">no columns →</span>
+                    </th>
+                    {% endif %}
+                </tr>
+            </thead>
+
+            <tbody>
+                {% if not schema.rules %}
+                <tr class="tr-empty-rules">
+                    <td class="td-empty-rules"
+                        colspan="{{ 5 + (n_in if n_in > 0 else 1) + (n_out if n_out > 0 else 1) }}">
+                        <div class="empty-rules-msg">
+                            <span>📭</span>
+                            <span>No rules defined — click "Add Rule"</span>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                {% for rule in schema.rules %}
+                {% set ri = loop.index0 %}
+                <tr class="dt-row">
+                    {# Row number #}
+                    <td class="td-rownum">{{ loop.index }}</td>
+
+                    {# Priority #}
+                    <td class="td-priority">
+                        <input class="priority-inp" type="number" name="priority" value="{{ rule.priority }}"
+                            hx-put="/api/table/{{ func_name }}/rule/{{ ri }}/priority" hx-target="#editor-container"
+                            hx-swap="innerHTML" hx-trigger="change">
+                    </td>
+
+                    {# Condition cells #}
+                    {% if schema.inputs %}
+                    {% for col in schema.inputs %}
+                    {% set ci = loop.index0 %}
+                    <td class="td-cond">
+                        <input class="cell-inp cell-expr" name="expr"
+                            value="{{ (rule.conditions[ci] if ci < rule.conditions | length else '') | e }}"
+                            placeholder="* (any)" hx-put="/api/table/{{ func_name }}/rule/{{ ri }}/condition/{{ ci }}"
+                            hx-target="#editor-container" hx-swap="innerHTML" hx-trigger="change">
+                    </td>
+                    {% endfor %}
+                    {% else %}
+                    <td class="td-cond"></td>
+                    {% endif %}
+
+                    {# Divider #}
+                    <td class="td-divider"></td>
+
+                    {# Result cells #}
+                    {% if schema.outputs %}
+                    {% for col in schema.outputs %}
+                    {% set ci = loop.index0 %}
+                    <td class="td-result">
+                        <input class="cell-inp cell-result" name="value"
+                            value="{{ (rule.results[ci] if ci < rule.results | length else '') | e }}" placeholder='""'
+                            hx-put="/api/table/{{ func_name }}/rule/{{ ri }}/result/{{ ci }}"
+                            hx-target="#editor-container" hx-swap="innerHTML" hx-trigger="change">
+                    </td>
+                    {% endfor %}
+                    {% else %}
+                    <td class="td-result"></td>
+                    {% endif %}
+
+                    {# Annotation #}
+                    <td class="td-annotation">
+                        <input class="annotation-inp" name="annotation" value="{{ rule.annotation | e }}"
+                            placeholder="annotation..." hx-put="/api/table/{{ func_name }}/rule/{{ ri }}/annotation"
+                            hx-target="#editor-container" hx-swap="innerHTML" hx-trigger="change">
+                    </td>
+
+                    {# Stop on match #}
+                    <td class="td-stop">
+                        <input type="checkbox" class="stop-chk" name="stop_on_match" {% if rule.stop_on_match
+                            %}checked{% endif %} hx-put="/api/table/{{ func_name }}/rule/{{ ri }}/stop"
+                            hx-target="#editor-container" hx-swap="innerHTML" hx-trigger="change">
+                    </td>
+
+                    {# Delete #}
+                    <td class="td-del">
+                        <button class="btn-del-row" hx-delete="/api/table/{{ func_name }}/rule/{{ ri }}"
+                            hx-target="#editor-container" hx-swap="innerHTML" title="Delete rule">🗑</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {# ── Footer ── #}
+    <div class="dt-footer">
+        <button class="btn-add-row" hx-post="/api/table/{{ func_name }}/add_rule" hx-target="#editor-container"
+            hx-swap="innerHTML">
+            ＋ Add Rule
+        </button>
+
+        {% if schema.rules %}
+        <span class="dt-rules-count">{{ schema.rules | length }} rules</span>
+        {% endif %}
+
+        {# Syntax help #}
+        <div class="syntax-hint" x-data="{ open: false }">
+            <button class="syntax-hint-btn" @click="open = !open" title="Syntax Help">?</button>
+            <div class="syntax-tip-box" :class="open ? 'visible' : ''">
+                <div class="tip-section">Comparisons</div>
+                <div class="tip-row"><span class="tip-expr">&gt; 100</span><span class="tip-desc">greater than 100</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">&lt; 50</span><span class="tip-desc">less than 50</span></div>
+                <div class="tip-row"><span class="tip-expr">&gt;= 18</span><span class="tip-desc">at least 18</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">== "active"</span><span class="tip-desc">equal to active</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">!= 0</span><span class="tip-desc">not equal to 0</span></div>
+
+                <div class="tip-section">Ranges</div>
+                <div class="tip-row"><span class="tip-expr">[1..100]</span><span class="tip-desc">inclusive</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">(0..100)</span><span class="tip-desc">exclusive</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">[18..65)</span><span class="tip-desc">mixed</span></div>
+
+                <div class="tip-section">Lists</div>
+                <div class="tip-row"><span class="tip-expr">'US', 'CA', 'GB'</span><span class="tip-desc">strings</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">1, 2, 3, 5, 8</span><span class="tip-desc">numbers</span>
+                </div>
+
+                <div class="tip-section">Combinations</div>
+                <div class="tip-row"><span class="tip-expr">&gt; 0 and &lt; 100</span><span class="tip-desc">AND</span>
+                </div>
+                <div class="tip-row"><span class="tip-expr">&lt; 0 or &gt; 100</span><span class="tip-desc">OR</span>
+                </div>
+
+                <div class="tip-section">Wildcard</div>
+                <div class="tip-row"><span class="tip-expr">(empty) / *</span><span class="tip-desc">any
+                        value</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
