@@ -15,6 +15,8 @@ document.addEventListener('alpine:init', () => {
         evalData: null,
         evalStatus: '',
         testerOpen: true,
+        versionsOpen: true,
+        hintsOpen: true,
         inputSchema: [],
         outputsSchema: [],
         triggers: [],
@@ -250,4 +252,11 @@ document.addEventListener('alpine:init', () => {
             return t === 'number' ? '🔢' : t === 'boolean' ? '⊨' : '🔤';
         }
     }));
+});
+
+// Compile dynamic HTML elements swapped by HTMX so Alpine.js can process their directives
+document.addEventListener('htmx:afterSwap', (event) => {
+    if (typeof Alpine !== 'undefined' && event.detail.target) {
+        Alpine.process(event.detail.target);
+    }
 });

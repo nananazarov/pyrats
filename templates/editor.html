@@ -261,3 +261,69 @@
     </div>
 </div>
 {% endif %}
+
+
+{# ── Versions Container Out-of-Band Swap ── #}
+<div id="versions-container" hx-swap-oob="true">
+    <div class="card">
+        <div class="card-header tester-toggle" :class="!versionsOpen?'collapsed':''"
+            @click="versionsOpen=!versionsOpen" style="display:flex; justify-content:space-between; align-items:center; padding: 6px 10px; cursor: pointer; user-select: none;">
+            <div class="card-title" style="display:flex; align-items:center; gap:6px;">
+                <span>⏳ Version History</span>
+                {% if has_unsaved_changes %}
+                <span class="badge bg-warning text-dark" style="font-size: 8px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 5px; border-radius: 3px; box-shadow: 0 0 5px rgba(245, 158, 11, 0.3);">UNSAVED</span>
+                {% endif %}
+            </div>
+            <span class="caret">▼</span>
+        </div>
+        <div x-show="versionsOpen" x-transition>
+            <div class="card-body scrollable-card-body" style="display:flex; flex-direction:column; gap:8px; padding: 10px;">
+                <!-- Save Version Button -->
+                <button class="btn btn-full {% if has_unsaved_changes %}btn-save-unsaved{% else %}btn-save-saved{% endif %}"
+                        hx-post="/api/table/{{ func_name }}/save"
+                        hx-target="#editor-container"
+                        hx-swap="innerHTML"
+                        style="gap: 6px; font-weight: 600; font-size: 11px; padding: 6px 10px;">
+                    💾 {% if has_unsaved_changes %}Save Changes{% else %}Save Version{% endif %}
+                </button>
+                
+                <!-- List of Versions -->
+                <div class="version-list" style="max-height: 250px; overflow-y: auto; display:flex; flex-direction:column; gap:6px; margin-top:4px; padding-right: 4px;">
+                    {% if versions %}
+                        {% for v in versions %}
+                        <div class="version-item {% if loop.first %}active-version{% endif %}" 
+                             style="position:relative;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2px;">
+                                <span style="font-family:var(--mono); font-size:10px; color:var(--text); font-weight:500;">
+                                    {{ v.timestamp }}
+                                </span>
+                                {% if loop.first %}
+                                <span class="status-badge status-ok" style="font-size:8px; padding:1px 4px; font-weight: 700;">ACTIVE</span>
+                                {% else %}
+                                <button class="btn btn-ghost btn-sm" 
+                                        hx-post="/api/table/{{ func_name }}/restore/{{ v.id }}"
+                                        hx-target="#editor-container"
+                                        hx-swap="innerHTML"
+                                        style="font-size:9px; padding:2px 5px;"
+                                        title="Restore this version">
+                                    Revert
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div style="font-size:9px; color:var(--text-muted); display:flex; gap:6px;">
+                                <span>Rules: <strong>{{ v.rules_count }}</strong></span>
+                                <span>Inputs: <strong>{{ v.inputs_count }}</strong></span>
+                                <span>Outputs: <strong>{{ v.outputs_count }}</strong></span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size:11px; color:var(--text-muted); text-align:center; padding:12px 0;">
+                            No saved versions yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1067,4 +1067,95 @@ table.data-table tr:hover td { background: rgba(255, 255, 255, 0.01); }
         color: #2d333b;
         font-style: italic;
     }
+
+    /* ── Versions history premium styling ── */
+    .btn-save-unsaved {
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
+        border: none !important;
+        transition: all 0.2s ease-in-out;
+        animation: savePulse 2s infinite alternate;
+    }
+
+    .btn-save-unsaved:hover {
+        background: linear-gradient(135deg, #4f46e5 0%, var(--accent) 100%) !important;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.55);
+        transform: translateY(-1px);
+    }
+
+    @keyframes savePulse {
+        0% {
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+        }
+        100% {
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.6);
+        }
+    }
+
+    .version-list::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .version-item {
+        border: 1px solid var(--border);
+        background: var(--bg);
+        border-radius: 6px;
+        padding: 8px 10px;
+        transition: all 0.2s ease;
+    }
+
+    .version-item:hover {
+        border-color: rgba(99, 102, 241, 0.4);
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.1);
+    }
+
+    .active-version {
+        border-color: rgba(99, 102, 241, 0.6) !important;
+        background: rgba(99, 102, 241, 0.05) !important;
+        box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+    }
+
+    /* ── Scrollable Card Body and Flex Block Styling ── */
+    .scrollable-card-body {
+        max-height: 280px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .scrollable-card-body::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+
+    .scrollable-card-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollable-card-body::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
+    }
+
+    .scrollable-card-body::-webkit-scrollbar-thumb:hover {
+        background: #3d444d;
+    }
+
+    /* ── Active Saved Version Button ── */
+    .btn-save-saved {
+        background: rgba(99, 102, 241, 0.12) !important;
+        border: 1px solid rgba(99, 102, 241, 0.4) !important;
+        color: var(--text) !important;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .btn-save-saved:hover {
+        background: rgba(99, 102, 241, 0.25) !important;
+        border-color: rgba(99, 102, 241, 0.7) !important;
+        box-shadow: 0 0 8px rgba(99, 102, 241, 0.25);
+        color: #ffffff !important;
+        transform: translateY(-1px);
+    }
 </style>

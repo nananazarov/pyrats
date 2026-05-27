@@ -13,7 +13,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
-from db import get_db, init_db, list_functions, load_schema, save_schema
+from db import (create_version, get_db, init_db, list_functions, list_versions,
+                load_active_schema, load_schema, restore_version_by_id,
+                save_schema)
 from engine import RuleEngine
 from models import ColType, ColumnDef, RuleRow, TableSchema, TriggerModel
 
@@ -29,128 +31,126 @@ async def lifespan(app: FastAPI):
     # Seed demo decision tables if they do not exist yet
     # 1. calc_discount
     if "calc_discount" not in funcs:
-        save_schema(
-            "calc_discount",
-            TableSchema(
-                inputs=[
-                    ColumnDef(name="customer_tier", type="string"),
-                    ColumnDef(name="cart_total", type="number"),
-                ],
-                outputs=[
-                    ColumnDef(name="discount", type="number"),
-                    ColumnDef(name="free_shipping", type="boolean"),
-                ],
-                rules=[
-                    RuleRow(
-                        id="vip_large",
-                        priority=10,
-                        conditions=['"vip"', ">= 1000"],
-                        results=["0.2", "true"],
-                        annotation="VIP + large cart",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="gold_large",
-                        priority=20,
-                        conditions=['"gold"', ">= 500"],
-                        results=["0.15", "true"],
-                        annotation="Gold + medium/large cart",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="regular_promo",
-                        priority=30,
-                        conditions=['"regular", "standard"', ">= 200"],
-                        results=["0.05", "false"],
-                        annotation="Regular/Standard promo total threshold",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="free_shipping_threshold",
-                        priority=40,
-                        conditions=["*", ">= 100"],
-                        results=["0", "true"],
-                        annotation="Free shipping for any cart over 100",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="default",
-                        priority=100,
-                        conditions=["*", "*"],
-                        results=["0", "false"],
-                        annotation="Default baseline",
-                        stop_on_match=True,
-                    ),
-                ],
-            ),
+        discount_schema = TableSchema(
+            inputs=[
+                ColumnDef(name="customer_tier", type="string"),
+                ColumnDef(name="cart_total", type="number"),
+            ],
+            outputs=[
+                ColumnDef(name="discount", type="number"),
+                ColumnDef(name="free_shipping", type="boolean"),
+            ],
+            rules=[
+                RuleRow(
+                    id="vip_large",
+                    priority=10,
+                    conditions=['"vip"', ">= 1000"],
+                    results=["0.2", "true"],
+                    annotation="VIP + large cart",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="gold_large",
+                    priority=20,
+                    conditions=['"gold"', ">= 500"],
+                    results=["0.15", "true"],
+                    annotation="Gold + medium/large cart",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="regular_promo",
+                    priority=30,
+                    conditions=['"regular", "standard"', ">= 200"],
+                    results=["0.05", "false"],
+                    annotation="Regular/Standard promo total threshold",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="free_shipping_threshold",
+                    priority=40,
+                    conditions=["*", ">= 100"],
+                    results=["0", "true"],
+                    annotation="Free shipping for any cart over 100",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="default",
+                    priority=100,
+                    conditions=["*", "*"],
+                    results=["0", "false"],
+                    annotation="Default baseline",
+                    stop_on_match=True,
+                ),
+            ],
         )
+        save_schema("calc_discount", discount_schema)
+        create_version("calc_discount", discount_schema)
 
     # 2. risk_score
     if "risk_score" not in funcs:
-        save_schema(
-            "risk_score",
-            TableSchema(
-                inputs=[
-                    ColumnDef(name="age", type="number"),
-                    ColumnDef(name="income", type="number"),
-                    ColumnDef(name="employment", type="string"),
-                ],
-                outputs=[
-                    ColumnDef(name="risk_level", type="string"),
-                    ColumnDef(name="score", type="number"),
-                ],
-                rules=[
-                    RuleRow(
-                        id="low_risk_high_income",
-                        priority=10,
-                        conditions=["[25..60]", ">= 75000", '"employed"'],
-                        results=['"low"', "10"],
-                        annotation="Stable employed high-earning adult",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="stable_mid_income",
-                        priority=20,
-                        conditions=["[25..60]", "[40000..75000)", '"employed"'],
-                        results=['"medium"', "35"],
-                        annotation="Middle-class employed adult",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="young_employed",
-                        priority=30,
-                        conditions=["< 25", ">= 30000", '"employed"'],
-                        results=['"medium"', "45"],
-                        annotation="Young adult starting career",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="unemployed_risk",
-                        priority=40,
-                        conditions=["*", "*", '"unemployed"'],
-                        results=['"high"', "85"],
-                        annotation="Unemployed status multiplier",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="retired_low_income",
-                        priority=50,
-                        conditions=["> 65", "< 20000", "*"],
-                        results=['"high"', "70"],
-                        annotation="Retired low-income household risk",
-                        stop_on_match=True,
-                    ),
-                    RuleRow(
-                        id="default",
-                        priority=100,
-                        conditions=["*", "*", "*"],
-                        results=['"medium"', "50"],
-                        annotation="Default baseline score",
-                        stop_on_match=True,
-                    ),
-                ],
-            ),
+        risk_schema = TableSchema(
+            inputs=[
+                ColumnDef(name="age", type="number"),
+                ColumnDef(name="income", type="number"),
+                ColumnDef(name="employment", type="string"),
+            ],
+            outputs=[
+                ColumnDef(name="risk_level", type="string"),
+                ColumnDef(name="score", type="number"),
+            ],
+            rules=[
+                RuleRow(
+                    id="low_risk_high_income",
+                    priority=10,
+                    conditions=["[25..60]", ">= 75000", '"employed"'],
+                    results=['"low"', "10"],
+                    annotation="Stable employed high-earning adult",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="stable_mid_income",
+                    priority=20,
+                    conditions=["[25..60]", "[40000..75000)", '"employed"'],
+                    results=['"medium"', "35"],
+                    annotation="Middle-class employed adult",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="young_employed",
+                    priority=30,
+                    conditions=["< 25", ">= 30000", '"employed"'],
+                    results=['"medium"', "45"],
+                    annotation="Young adult starting career",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="unemployed_risk",
+                    priority=40,
+                    conditions=["*", "*", '"unemployed"'],
+                    results=['"high"', "85"],
+                    annotation="Unemployed status multiplier",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="retired_low_income",
+                    priority=50,
+                    conditions=["> 65", "< 20000", "*"],
+                    results=['"high"', "70"],
+                    annotation="Retired low-income household risk",
+                    stop_on_match=True,
+                ),
+                RuleRow(
+                    id="default",
+                    priority=100,
+                    conditions=["*", "*", "*"],
+                    results=['"medium"', "50"],
+                    annotation="Default baseline score",
+                    stop_on_match=True,
+                ),
+            ],
         )
+        save_schema("risk_score", risk_schema)
+        create_version("risk_score", risk_schema)
 
     # Seed default triggers if triggers table is empty
     db = get_db()
@@ -185,7 +185,15 @@ editor_template = jinja_env.get_template("editor.html")
 
 def _get_editor_html(func_name: str) -> str:
     schema = load_schema(func_name)
-    return editor_template.render(func_name=func_name, schema=schema)
+    versions = list_versions(func_name)
+    active_schema = load_active_schema(func_name)
+    has_unsaved_changes = (schema.model_dump() != active_schema.model_dump())
+    return editor_template.render(
+        func_name=func_name,
+        schema=schema,
+        versions=versions,
+        has_unsaved_changes=has_unsaved_changes,
+    )
 
 
 # ========================= ROUTES =========================
@@ -219,7 +227,9 @@ async def create_table(request: Request) -> Dict[str, Any]:
         )
     if name in list_functions():
         raise HTTPException(400, f"Table '{name}' already exists")
-    save_schema(name, TableSchema())
+    empty_schema = TableSchema()
+    save_schema(name, empty_schema)
+    create_version(name, empty_schema)
     return {"success": True, "name": name}
 
 
@@ -243,6 +253,11 @@ async def rename_table(func_name: str, request: Request) -> Dict[str, Any]:
     save_schema(new_name, schema)
     db = get_db()
     db.execute("DELETE FROM tables WHERE function_name = ?", (func_name,))
+    # Update all timestamped versions for this renamed table
+    db.execute(
+        "UPDATE table_versions SET function_name = ? WHERE function_name = ?",
+        (new_name, func_name),
+    )
     # Update references in triggers
     db.execute(
         "UPDATE triggers SET function_name = ? WHERE function_name = ?",
@@ -486,7 +501,7 @@ async def update_rule_stop(func_name: str, ri: int, request: Request) -> str:
 async def evaluate(func_name: str, body: Dict[str, Any]) -> Dict[str, Any]:
     if func_name not in list_functions():
         raise HTTPException(404, "Function not found")
-    schema = load_schema(func_name)
+    schema = load_active_schema(func_name)
     engine = RuleEngine(schema)
     result = engine.evaluate(body)
     if result is None:
@@ -551,7 +566,7 @@ async def run_trigger_route(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
         raise HTTPException(404, f"Route '{path}' is not registered")
 
     func_name = row["function_name"]
-    schema = load_schema(func_name)
+    schema = load_active_schema(func_name)
     engine = RuleEngine(schema)
     result = engine.evaluate(body)
     if result is None:
@@ -562,6 +577,29 @@ async def run_trigger_route(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
             "result": None,
         }
     return {"route_path": path, "function_name": func_name, **result}
+
+
+# ========================= VERSIONS =========================
+
+
+@app.post("/api/table/{func_name}/save", response_class=HTMLResponse)
+async def save_active_version_route(func_name: str) -> str:
+    if func_name not in list_functions():
+        raise HTTPException(404, "Function not found")
+    schema = load_schema(func_name)
+    create_version(func_name, schema)
+    return _get_editor_html(func_name)
+
+
+@app.post("/api/table/{func_name}/restore/{version_id}", response_class=HTMLResponse)
+async def restore_version_route(func_name: str, version_id: int) -> str:
+    if func_name not in list_functions():
+        raise HTTPException(404, "Function not found")
+    try:
+        restore_version_by_id(func_name, version_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return _get_editor_html(func_name)
 
 
 if __name__ == "__main__":

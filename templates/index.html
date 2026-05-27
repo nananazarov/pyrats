@@ -19,7 +19,7 @@
 
     <!-- HTMX & Alpine.js -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer src="/static/js/main.js"></script>
+    <script defer src="/static/js/main.js?v=4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
     <link rel="stylesheet" href="/static/css/main.css">
@@ -132,15 +132,31 @@
             <!-- Side panel -->
             <div class="side-panel">
 
+                <!-- Versions Container (updated via OOB swap from editor.html) -->
+                <div id="versions-container">
+                    <div class="card">
+                        <div class="card-header tester-toggle" :class="!versionsOpen?'collapsed':''"
+                            @click="versionsOpen=!versionsOpen" style="cursor: pointer; user-select: none;">
+                            <div class="card-title">⏳ Version History</div>
+                            <span class="caret">▼</span>
+                        </div>
+                        <div x-show="versionsOpen" x-transition>
+                            <div class="card-body scrollable-card-body" style="font-size:11px;color:var(--text-muted);text-align:center;padding:12px 0;">
+                                Select a table on the left
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Tester card -->
                 <div class="card">
                     <div class="card-header tester-toggle" :class="!testerOpen?'collapsed':''"
-                        @click="testerOpen=!testerOpen">
+                        @click="testerOpen=!testerOpen" style="cursor: pointer; user-select: none;">
                         <div class="card-title">⚡ Tester</div>
                         <span class="caret">▼</span>
                     </div>
                     <div x-show="testerOpen" x-transition>
-                        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+                        <div class="card-body scrollable-card-body" style="display:flex;flex-direction:column;gap:8px;">
                             <div x-show="!funcName"
                                 style="font-size:11px;color:var(--text-muted);text-align:center;padding:12px 0;">
                                 Select a function on the left
@@ -225,17 +241,21 @@
 
                 <!-- Hints card -->
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header tester-toggle" :class="!hintsOpen?'collapsed':''"
+                        @click="hintsOpen=!hintsOpen" style="cursor: pointer; user-select: none;">
                         <div class="card-title">💡 Hints</div>
+                        <span class="caret">▼</span>
                     </div>
-                    <div class="card-body">
-                        <ul class="hint-list">
-                            <li><strong>Priority:</strong> lower = evaluates earlier</li>
-                            <li><strong>AND group:</strong> all conditions must be true (indigo border)</li>
-                            <li><strong>OR group:</strong> at least one condition must be true (green border)</li>
-                            <li><strong>any:</strong> always true — use as a default branch</li>
-                            <li><strong>Stop Match:</strong> stop on first matched row</li>
-                        </ul>
+                    <div x-show="hintsOpen" x-transition>
+                        <div class="card-body scrollable-card-body">
+                            <ul class="hint-list">
+                                <li><strong>Priority:</strong> lower = evaluates earlier</li>
+                                <li><strong>AND group:</strong> all conditions must be true (indigo border)</li>
+                                <li><strong>OR group:</strong> at least one condition must be true (green border)</li>
+                                <li><strong>any:</strong> always true — use as a default branch</li>
+                                <li><strong>Stop Match:</strong> stop on first matched row</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
