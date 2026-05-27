@@ -10,5 +10,6 @@ dependencies = [
     "jinja2>=3.1.6",
     "pydantic>=2.13.4",
     "python-multipart>=0.0.29",
+    "ruff>=0.15.14",
     "uvicorn>=0.48.0",
 ]
